@@ -1,15 +1,16 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import injectSheet from 'react-jss';
 
 const Key = props => {
-  const { classes, label, value, handleClick, splBtn } = props;
+  const { classes, label, value, handleClick, splBtn, dblBtn } = props;
 
   return (
     <button
       type="button"
       value={value}
       onClick={val => handleClick(val)}
-      className={`${classes.btn} ${splBtn ? classes.btnHighlight : ''}`}
+      className={`${classes.btn} ${splBtn && classes.btnHighlight} ${dblBtn && classes.dblBtn}`}
     >
       {label}
     </button>
@@ -26,7 +27,6 @@ const styles = {
     border: 'none',
     borderRadius: 8,
     outline: 'none',
-    // color:'#eeefff',
     color: '#f0f8ff',
     fontSize: 25,
     fontWeight: 600,
@@ -39,6 +39,25 @@ const styles = {
   },
   btnHighlight: {
     color: '#fff42f',
+    fontWeight: 'bold',
   },
+  dblBtn: {
+    gridColumn: '3/5',
+    width: 130,
+  },
+};
+
+Key.propTypes = {
+  classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
+  handleClick: PropTypes.func.isRequired,
+  label: PropTypes.string.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string.isRequired, PropTypes.number.isRequired]).isRequired,
+  splBtn: PropTypes.bool,
+  dblBtn: PropTypes.bool,
+};
+
+Key.defaultProps = {
+  splBtn: false,
+  dblBtn: false,
 };
 export default injectSheet(styles)(Key);
