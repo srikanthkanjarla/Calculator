@@ -2,6 +2,7 @@
   "name": "calculator",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://srikanthkanjarla.github.io/Calculator/",
   "dependencies": {
     "prop-types": "^15.7.2",
     "react": "^16.8.3",
