@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import injectSheet from 'react-jss';
 import Display from './Display';
 import Key from './Key';
@@ -13,16 +14,15 @@ class App extends Component {
       firstValue: '',
       secondValue: '',
       nextValue: false,
+      isResult: false,
     };
     this.handleClick = this.handleClick.bind(this);
   }
 
   handleClick(event) {
-    const { displayValue, operator, allowDot, firstValue, secondValue, nextValue } = this.state;
+    const { operator, allowDot, firstValue, secondValue, nextValue, isResult } = this.state;
     const { value } = event.target;
     const operatorList = ['+', '-', '*', '/', '%'];
-    const isEndWithDot = displayValue[displayValue.length - 1] === '.';
-    const isEndWithOperator = operatorList.includes(displayValue[displayValue.length - 1]);
 
     switch (value) {
       case 'clear':
@@ -44,20 +44,13 @@ class App extends Component {
         } else if (operator) {
           this.setState({
             operator: null,
+            nextValue: false,
           });
         } else if (firstValue) {
           this.setState({
             firstValue: firstValue.length === 1 ? '' : firstValue.slice(0, -1),
           });
         }
-
-        if (displayValue !== '' && displayValue !== '0') {
-          this.setState({
-            displayValue: displayValue.length === 1 ? '0' : displayValue.slice(0, -1),
-            allowDot: !isEndWithDot,
-          });
-        }
-
         break;
 
       case '0':
@@ -70,16 +63,24 @@ class App extends Component {
       case '7':
       case '8':
       case '9':
-        this.setState({
-          displayValue: displayValue === '0' ? value : displayValue + value,
-        });
         if (!nextValue) {
-          this.setState({
-            firstValue: firstValue + value,
-          });
+          this.setState(state => ({
+            firstValue: state.firstValue.length < 12 ? state.firstValue + value : state.firstValue,
+          }));
         } else {
+          this.setState(state => ({
+            secondValue: state.secondValue.length < 12 ? state.secondValue + value : state.secondValue,
+          }));
+        }
+        if (isResult && !operator && allowDot) {
           this.setState({
-            secondValue: secondValue + value,
+            isResult: false,
+            displayValue: '0',
+            allowDot: true,
+            firstValue: value,
+            secondValue: '',
+            operator: null,
+            nextValue: false,
           });
         }
         break;
@@ -89,16 +90,23 @@ class App extends Component {
       case '/':
       case '*':
       case '%':
-        this.setState({
-          operator: value,
-          allowDot: true,
-          nextValue: true,
-          displayValue: (isEndWithOperator || isEndWithDot ? displayValue.slice(0, -1) : displayValue) + value,
-        });
+        {
+          const isEndWithDot = firstValue[firstValue.length - 1] === '.';
+          const isEndWithOperator = operatorList.includes(firstValue[firstValue.length - 1]);
+          if (firstValue) {
+            this.setState({
+              operator: value,
+              allowDot: true,
+              nextValue: true,
+              firstValue: isEndWithOperator || isEndWithDot ? firstValue.slice(0, -1) : firstValue,
+            });
+          }
+        }
+
         if (nextValue && secondValue && secondValue !== '.') {
           // eslint-disable-next-line no-eval
           const result = eval(`${firstValue}${operator}${secondValue}`);
-          const formatResult = (result % 1 === 0 ? result : result.toFixed(3)).toString();
+          const formatResult = (result % 1 === 0 ? result : result.toFixed(2)).toString();
           this.setState({
             displayValue: formatResult + value,
             firstValue: formatResult,
@@ -109,27 +117,40 @@ class App extends Component {
         break;
 
       case '.':
+        if (!nextValue) {
+          if (firstValue === '') {
+            this.setState({
+              firstValue: `0${value}`,
+            });
+          } else {
+            this.setState({
+              firstValue: allowDot ? firstValue + value : firstValue,
+            });
+          }
+        }
+
+        if (nextValue) {
+          if (secondValue === '') {
+            this.setState({
+              secondValue: `0${value}`,
+            });
+          } else {
+            this.setState({
+              secondValue: allowDot ? secondValue + value : secondValue,
+            });
+          }
+        }
+
         this.setState({
           allowDot: false,
-          displayValue: allowDot ? displayValue + value : displayValue,
         });
-
-        if (!nextValue) {
-          this.setState({
-            firstValue: allowDot ? firstValue + value : firstValue,
-          });
-        } else {
-          this.setState({
-            secondValue: allowDot ? secondValue + value : secondValue,
-          });
-        }
         break;
 
       case '=':
         if (nextValue && secondValue && secondValue !== '.') {
           // eslint-disable-next-line no-eval
           const result = eval(`${firstValue}${operator}${secondValue}`);
-          const formatResult = (result % 1 === 0 ? result : result.toFixed(3)).toString();
+          const formatResult = (result % 1 === 0 ? result : result.toFixed(2)).toString();
           this.setState({
             displayValue: formatResult,
             firstValue: formatResult,
@@ -137,12 +158,18 @@ class App extends Component {
             nextValue: false,
             operator: null,
             allowDot: result % 1 === 0,
+            isResult: true,
           });
         }
-
         break;
       default:
     }
+
+    this.setState(state => ({
+      displayValue: state.firstValue
+        ? `${state.firstValue}${state.operator !== null ? state.operator : ''}${state.secondValue}`
+        : '0',
+    }));
   }
 
   render() {
@@ -153,25 +180,28 @@ class App extends Component {
         <div className={classes.container}>
           <Display result={displayValue} />
           <Key value="clear" label="C" handleClick={this.handleClick} splBtn />
-          <Key value="%" label="%" handleClick={this.handleClick} />
-          <Key value="/" label="&divide;" handleClick={this.handleClick} />
           <Key value="del" label="&laquo;" handleClick={this.handleClick} splBtn />
-          <Key value={7} label={7} handleClick={this.handleClick} />
-          <Key value={8} label={8} handleClick={this.handleClick} />
-          <Key value={9} label={9} handleClick={this.handleClick} />
+          <Key value="%" label="%" handleClick={this.handleClick} />
           <Key value="*" label="&times;" handleClick={this.handleClick} />
-          <Key value={4} label={4} handleClick={this.handleClick} />
-          <Key value={5} label={5} handleClick={this.handleClick} />
-          <Key value={6} label={6} handleClick={this.handleClick} />
-          <Key value="-" label="-" handleClick={this.handleClick} />
-          <Key value={1} label={1} handleClick={this.handleClick} />
-          <Key value={2} label={2} handleClick={this.handleClick} />
-          <Key value={3} label={3} handleClick={this.handleClick} />
+
+          <Key value={7} label="7" handleClick={this.handleClick} />
+          <Key value={8} label="8" handleClick={this.handleClick} />
+          <Key value={9} label="9" handleClick={this.handleClick} />
+          <Key value="/" label="&divide;" handleClick={this.handleClick} />
+
+          <Key value={4} label="4" handleClick={this.handleClick} />
+          <Key value={5} label="5" handleClick={this.handleClick} />
+          <Key value={6} label="6" handleClick={this.handleClick} />
           <Key value="+" label="+" handleClick={this.handleClick} />
-          <Key value="gt" label="GT" handleClick={this.handleClick} />
-          <Key value={0} label={0} handleClick={this.handleClick} />
+
+          <Key value={1} label="1" handleClick={this.handleClick} />
+          <Key value={2} label="2" handleClick={this.handleClick} />
+          <Key value={3} label="3" handleClick={this.handleClick} />
+          <Key value="-" label="-" handleClick={this.handleClick} />
+
+          <Key value="0" label="0" handleClick={this.handleClick} />
           <Key value="." label="." handleClick={this.handleClick} />
-          <Key value="=" label="=" handleClick={this.handleClick} splBtn/>
+          <Key value="=" label="=" handleClick={this.handleClick} splBtn dblBtn />
         </div>
       </div>
     );
@@ -189,15 +219,15 @@ const styles = {
   },
   container: {
     width: 350,
-    height: 500,
+    height: 510,
     borderRadius: '12px',
     backgroundColor: 'hsla(244,16.5%,17.8%,0.5)',
     display: 'grid',
     gridTemplateColumns: 'auto auto auto auto',
     justifyItems: 'center',
-    alignItems: 'space-evenly',
-    overflow: 'none',
   },
 };
-
+App.propTypes = {
+  classes: PropTypes.objectOf(PropTypes.string.isRequired).isRequired,
+};
 export default injectSheet(styles)(App);
